@@ -13,9 +13,11 @@ import (
 )
 
 const (
-	header         = "ZBXD"
-	zabbixVersion  = 1
-	defaultTimeout = 5 * time.Second
+	zabbixHeader      = "ZBXD"
+	zabbixVersion     = 1
+	defaultTimeout    = 5 * time.Second
+	defaultRetries    = 3
+	defaultRetryDelay = 1 * time.Second
 )
 
 var (
@@ -62,9 +64,24 @@ func NewSender(server string, port int) *SenderConfig {
 		Server:     server,
 		Port:       port,
 		Timeout:    defaultTimeout,
-		Retries:    2,
-		RetryDelay: 1 * time.Second,
+		Retries:    defaultRetries,
+		RetryDelay: defaultRetryDelay,
 	}
+}
+
+func (s *SenderConfig) SetRetries(qty int) error {
+	s.Retries = qty
+	return nil
+}
+
+func (s *SenderConfig) SetRetryDelay(delay time.Duration) error {
+	s.RetryDelay = delay
+	return nil
+}
+
+func (s *SenderConfig) SetTimeout(timeout time.Duration) error {
+	s.Timeout = timeout
+	return nil
 }
 
 func (s *SenderConfig) Send(items []ZabbixDataItem) (*ZabbixResponse, error) {
@@ -128,7 +145,7 @@ func buildPacket(data []byte) ([]byte, error) {
 	}
 
 	buffer := new(bytes.Buffer)
-	buffer.Write([]byte(header))
+	buffer.Write([]byte(zabbixHeader))
 	buffer.WriteByte(zabbixVersion)
 	binary.Write(buffer, binary.LittleEndian, uint64(len(data)))
 	buffer.Write(data)
@@ -145,7 +162,7 @@ func readResponse(conn net.Conn) (*ZabbixResponse, error) {
 		return nil, fmt.Errorf("read header error: %w", err)
 	}
 
-	if string(header[:4]) != "ZBXD" {
+	if string(header[:4]) != zabbixHeader {
 		return nil, ErrIncompleteHeader
 	}
 

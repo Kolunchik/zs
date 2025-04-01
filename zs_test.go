@@ -137,6 +137,37 @@ func TestReadResponse(t *testing.T) {
 	})
 }
 
+func TestMisc(t *testing.T) {
+	sender := NewSender("localhost", 777)
+	t.Run("SetRetries", func(t *testing.T) {
+		err := sender.SetRetries(400)
+		if err != nil {
+			t.Fatalf("SetRetries failed")
+		}
+		if sender.Retries != 400 {
+			t.Fatalf("SetRetries failed, %v != %v", sender.Retries, 400)
+		}
+	})
+	t.Run("SetRetryDelay", func(t *testing.T) {
+		err := sender.SetRetryDelay(6 * time.Minute)
+		if err != nil {
+			t.Fatalf("SetRetryDelay failed")
+		}
+		if sender.RetryDelay != 6*time.Minute {
+			t.Fatalf("SetRetryDelay failed, %v != %v", sender.RetryDelay, 6*time.Minute)
+		}
+	})
+	t.Run("SetTimeout", func(t *testing.T) {
+		err := sender.SetTimeout(7 * time.Minute)
+		if err != nil {
+			t.Fatalf("SetTimeout failed")
+		}
+		if sender.Timeout != 7*time.Minute {
+			t.Fatalf("SetTimeout failed, %v != %v", sender.Timeout, 7*time.Minute)
+		}
+	})
+}
+
 func TestSender(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		server, port := startTestServer(t, func(conn net.Conn) {
