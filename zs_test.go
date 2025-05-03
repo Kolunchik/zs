@@ -185,6 +185,68 @@ func TestSender(t *testing.T) {
 		}
 	})
 
+	t.Run("SuccessBatches", func(t *testing.T) {
+		server, port := startTestServer(t, func(conn net.Conn) {
+			sendSuccessResponse(conn)
+		})
+		defer server.Close()
+
+		sender := NewSender("localhost", port)
+		resp, err := sender.SendBatch([]ZabbixDataItem{
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+		}, 3)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if len(resp) != 2 {
+			t.Fatalf("Expected 2 responses, got %d", len(resp))
+		}
+		for i := range resp {
+			if resp[i].Processed != 1 {
+				t.Errorf("Expected 1 processed item, got %d", resp[i].Processed)
+			}
+		}
+		resp, err = sender.SendBatch([]ZabbixDataItem{
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+		}, 1)
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if len(resp) != 5 {
+			t.Fatalf("Expected 5 responses, got %d", len(resp))
+		}
+		for i := range resp {
+			if resp[i].Processed != 1 {
+				t.Errorf("Expected 1 processed item, got %d", resp[i].Processed)
+			}
+		}
+	})
+
+	t.Run("FailedBatches", func(t *testing.T) {
+		sender := NewSender("localhost", 8910)
+		resp, err := sender.SendBatch([]ZabbixDataItem{
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+			{Host: "test", Key: "key"},
+		}, 3)
+		if err == nil {
+			t.Fatalf("Expected error, got nil")
+		}
+		if len(resp) != 1 {
+			t.Fatalf("Expected 1 response, got %d", len(resp))
+		}
+	})
+
 	t.Run("RetrySuccess", func(t *testing.T) {
 		attempts := 0
 		server, port := startTestServer(t, func(conn net.Conn) {

@@ -69,6 +69,10 @@ func NewSender(server string, port int) *SenderConfig {
 	}
 }
 
+func (r *ZabbixResponse) String() string {
+	return fmt.Sprintf("%s, %s", r.Response, r.Info)
+}
+
 func (s *SenderConfig) SetRetries(qty int) error {
 	s.Retries = qty
 	return nil
@@ -104,6 +108,25 @@ func (s *SenderConfig) Send(items []ZabbixDataItem) (*ZabbixResponse, error) {
 	}
 
 	return nil, fmt.Errorf("after %d attempts: %w", s.Retries+1, lastErr)
+}
+
+func (s *SenderConfig) SendBatch(items []ZabbixDataItem, itemsPerBatch int) ([]*ZabbixResponse, error) {
+	if itemsPerBatch < 1 {
+		return nil, fmt.Errorf("size of batch too small")
+	}
+	responses := make([]*ZabbixResponse, 0)
+	for i := 0; i < len(items); i += itemsPerBatch {
+		end := i + itemsPerBatch
+		if end > len(items) {
+			end = len(items)
+		}
+		r, err := s.Send(items[i:end])
+		responses = append(responses, r)
+		if err != nil {
+			return responses, err
+		}
+	}
+	return responses, nil
 }
 
 func (s *SenderConfig) trySend(items []ZabbixDataItem) (*ZabbixResponse, error) {
