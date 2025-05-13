@@ -116,10 +116,7 @@ func (s *SenderConfig) SendBatch(items []ZabbixDataItem, itemsPerBatch int) ([]*
 	}
 	responses := make([]*ZabbixResponse, 0)
 	for i := 0; i < len(items); i += itemsPerBatch {
-		end := i + itemsPerBatch
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+itemsPerBatch, len(items))
 		r, err := s.Send(items[i:end])
 		responses = append(responses, r)
 		if err != nil {
@@ -130,7 +127,7 @@ func (s *SenderConfig) SendBatch(items []ZabbixDataItem, itemsPerBatch int) ([]*
 }
 
 func (s *SenderConfig) trySend(items []ZabbixDataItem) (*ZabbixResponse, error) {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", s.Server, s.Port), s.Timeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(s.Server, fmt.Sprintf("%d", s.Port)), s.Timeout)
 	if err != nil {
 		return nil, fmt.Errorf("connection error: %w", err)
 	}
